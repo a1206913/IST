@@ -97,7 +97,7 @@ public class TravelAgent implements MessageListener, ExceptionListener {
 				 * Send the response to the Destination specified by the JMSReplyTo field
 				 * of the received message, this is presumably a temporary queue created by the client
 				 */
-//				this.replyToProducer.send(receivedMessage.getJMSReplyTo(), response);
+				this.replyToProducer.send(receivedMessage.getJMSReplyTo(), response);
 				
 //				System.out.println("[" + this + "] Send Response: '" + response.getText() + "'");
 			}

@@ -62,4 +62,11 @@ public class Booking implements Serializable {
 		return "Booking [customer " + customer + ", persons=" + persons
 				+ ", destination=" + destination + ", date=" + dateFormat.format(date) + "]";
 	}
+	
+	public String consumerMessage() {
+		String ticket = "ticket";
+		if (getPersons() > 1)
+			ticket = "tickets";
+		return customer + " ordered " + getPersons() + " " + ticket + " to " + getDestination() + " at " + dateFormat.format(date);
+	}
 }

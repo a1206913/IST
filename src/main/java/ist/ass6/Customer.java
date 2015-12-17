@@ -5,12 +5,15 @@
 
 package ist.ass6;
 
+import ist.ass6.model.Booking;
+
 import java.util.Random;
 
 import org.apache.activemq.*;
 
 import javax.jms.*;
 import javax.jms.Message;
+
 
 public class Customer implements MessageListener{
 	private static String user = ActiveMQConnection.DEFAULT_USER;
@@ -99,10 +102,10 @@ public class Customer implements MessageListener{
 
 			
 			// ONLY for TEST ***** create the actual message that you want to send
-			TextMessage txtMessage = session.createTextMessage();
+			/*TextMessage txtMessage = session.createTextMessage();
 			txtMessage.setText("Hello messaging! - from Customer[" + getCustumerNumber() + "]");
-			System.out.println("Sending text message to the agent: " + txtMessage.getText());
-//			messageProducer.send(txtMessage);
+			System.out.println("Sending text message to the agent: " + txtMessage.getText());*/
+
 			/*
 			 * create the actual message that you want to send to the Agent 
 			 * this messages are generated randomly by calling the method
@@ -110,22 +113,31 @@ public class Customer implements MessageListener{
 			 * this method (getRandomBooking) generates random booking orders from a set of
 			 * booking instances
 			 */
+			String customer = "Customer " + getCustumerNumber();
+			Booking fBooking = BookingGenerator.getRandomBooking(customer);
+			System.out.println(fBooking.consumerMessage());
+			
+			
+//			create the actual message as Object messages
+			ObjectMessage objMessage = session.createObjectMessage(fBooking);
+			
 
 			// to be done soon
 
 			/*
 			 * set the reply to the temp queue we created
-			 * this is the queue the server will responde to
+			 * this is the queue the server will respond to
 			 */
 //			txtMessage.setJMSReplyTo(tempDest);
 			
 			/*
 			 * set a correlation ID, so when you get a response you know which sent
 			 * message the response is for
+			 * send the message to the consumer
 			 */
 			String correlationID = this.createRandomString();
-			txtMessage.setJMSCorrelationID(correlationID);
-			this.messageProducer.send(txtMessage);
+			objMessage.setJMSCorrelationID(correlationID);
+			this.messageProducer.send(objMessage);
 		} catch (JMSException ex) {
 			ex.printStackTrace();
 		}
@@ -151,12 +163,12 @@ public class Customer implements MessageListener{
 	 */
 	@Override
 	public void onMessage(Message receivedMessage) {
-		String messageFromConsumer = null;
+//		String messageFromConsumer = null;
 		try {
-			if (receivedMessage instanceof TextMessage) {
-				TextMessage textMessage = (TextMessage) receivedMessage;
-				messageFromConsumer = textMessage.getText();
-				System.out.println("[" + this + "] Reply Message: '" + messageFromConsumer + "'");
+			if (receivedMessage instanceof ObjectMessage) {
+				ObjectMessage objMessage = (ObjectMessage) receivedMessage;
+				Booking b = (Booking) objMessage.getObject();
+				System.out.println("[" + this + "] Reply Message: '");
 			}
 		}
 		catch (JMSException ex) {
