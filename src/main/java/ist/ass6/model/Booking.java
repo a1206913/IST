@@ -69,4 +69,11 @@ public class Booking implements Serializable {
 			ticket = "tickets";
 		return customer + " ordered " + getPersons() + " " + ticket + " to " + getDestination() + " at " + dateFormat.format(date);
 	}
+	
+	public String consolidatorMessage() {
+		String ticket = "ticket";
+		if (getPersons() > 1)
+			ticket = "tickets";
+		return "Book " + getPersons() + " " + ticket + " to " + getDestination() + " at " + dateFormat.format(date);
+	}
 }

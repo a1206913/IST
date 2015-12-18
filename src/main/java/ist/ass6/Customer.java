@@ -28,7 +28,7 @@ public class Customer implements MessageListener{
 	private static String url = ActiveMQConnection.DEFAULT_BROKER_URL;
 
 	// this will be the subjectID of our message queue
-	private static String subjectAirTicket = "agent";
+	private static String subjectBooking = "bookingF";
 	private int custumerNr;
 	
 	private MessageProducer messageProducer;
@@ -69,7 +69,7 @@ public class Customer implements MessageListener{
 		// create an empty connection
 		Connection connection = null;
 
-		// setup the message queue for the producer
+		// set up a ConnectionFactory for creating a connection to the EmbeddedBroker
 		ActiveMQConnectionFactory connectionFactory = new ActiveMQConnectionFactory(
 				user, password, url);
 		try {
@@ -82,7 +82,7 @@ public class Customer implements MessageListener{
 			Session session = connection.createSession(false,
 					Session.AUTO_ACKNOWLEDGE);
 			Destination bookingQueue = session
-					.createQueue(subjectAirTicket);
+					.createQueue(subjectBooking);
 
 			// Setup a message producer to send message to the queue the server is
 			// consuming from
@@ -145,7 +145,7 @@ public class Customer implements MessageListener{
 
 	public static void main(String[] args) {
 		// start the ten clients
-		for (int i = 0; i < 5; i++) {
+		for (int i = 1; i <= 5; i++) {
 			new Customer(i);
 		}
 	}
