@@ -81,12 +81,12 @@ public class Customer implements MessageListener{
 			// acknowledgeMode)
 			Session session = connection.createSession(false,
 					Session.AUTO_ACKNOWLEDGE);
-			Destination destinationQueue = session
+			Destination bookingQueue = session
 					.createQueue(subjectAirTicket);
 
 			// Setup a message producer to send message to the queue the server is
 			// consuming from
-			this.messageProducer = session.createProducer(destinationQueue);
+			this.messageProducer = session.createProducer(bookingQueue);
 			this.messageProducer.setDeliveryMode(DeliveryMode.PERSISTENT);
 			
 			/*
@@ -145,7 +145,7 @@ public class Customer implements MessageListener{
 
 	public static void main(String[] args) {
 		// start the ten clients
-		for (int i = 0; i < 2; i++) {
+		for (int i = 0; i < 5; i++) {
 			new Customer(i);
 		}
 	}
