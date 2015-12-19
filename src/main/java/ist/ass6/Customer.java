@@ -141,7 +141,7 @@ public class Customer implements MessageListener{
 		 * Failure to close a connection can cause resources not to be released by the JMS provider. 
 		 * Closing a connection also closes its sessions and their message producers and message consumers.
 		 */
-		finally {
+		/*finally {
 			if (connection != null) {
 				try {
 					System.out.println("Closing connection....");
@@ -153,7 +153,7 @@ public class Customer implements MessageListener{
 				}
 					
 			}
-		} 
+		} */
 	}
 
 	public static void main(String[] args) {
@@ -189,7 +189,7 @@ public class Customer implements MessageListener{
 			if (receivedMessage instanceof ObjectMessage) {
 				ObjectMessage objMessage = (ObjectMessage) receivedMessage;
 				Booking b = (Booking) objMessage.getObject();
-				System.out.println("[" + this + "] Reply Message: '");
+				System.out.println("[" + this + "] Reply Message: '" + b.consumerMessage());
 			}
 		}
 		catch (JMSException ex) {

@@ -108,26 +108,19 @@ public class TravelAgent implements MessageListener, ExceptionListener {
 	public void onMessage(Message receivedMessage) {
 		System.out.println("in the onMessage()-method");
 		try {
-//			ONLY Temporarily *** will be changed in OBJECTMESSAGE for the assignment
-			TextMessage txtMessageToC1 = null;
-			/*if (receivedMessage instanceof TextMessage) {
-				TextMessage txtMessage = (TextMessage) receivedMessage;
-				String messageText = txtMessage.getText();
-				response.setText("REPLY TO '" + messageText);*/
-			
 //			received messages from the customers
 			if (receivedMessage instanceof ObjectMessage) {
-				ObjectMessage objMessage = (ObjectMessage) receivedMessage;
-				Booking b = (Booking) objMessage.getObject();
+				ObjectMessage objReplyMsg = (ObjectMessage) receivedMessage;
+				Booking b = (Booking) objReplyMsg.getObject();
 				System.out.println("Received order for " + b.getCustomer());
 				
+//				create a message producer for the replies to the customer
+				MessageProducer producer = session.createProducer(receivedMessage.getJMSReplyTo());
+//				ObjectMessage replyMsg = session.createObjectMessage()
+				objReplyMsg.setJMSCorrelationID(receivedMessage.getJMSMessageID());
+				producer.send(objReplyMsg);
 				
-				if (b.getDestination().contains("Austria")) {
-//					create message for Consolidator1
-					txtMessageToC1 = session.createTextMessage();
-					String messageAsString = b.consolidatorMessage();
-					txtMessageToC1.setText(messageAsString);
-					
+				
 				/*
 				 * handling the messages accordingly by setting the correlationID from the received
 				 * message to be the correlationID of the response message
@@ -135,7 +128,7 @@ public class TravelAgent implements MessageListener, ExceptionListener {
 				 * this lets the customer identify to which message the received response belongs to 
 				 * 
 				 */
-					txtMessageToC1.setJMSCorrelationID(receivedMessage.getJMSCorrelationID());
+//					txtMessageToC1.setJMSCorrelationID(receivedMessage.getJMSCorrelationID());
 					
 				/*
 				 * Send the response to the Destination specified by the JMSReplyTo field
@@ -148,8 +141,6 @@ public class TravelAgent implements MessageListener, ExceptionListener {
 //				System.out.println("Received message: " + txtMessage.getText());
 				
 				System.out.println("the end of the onMessage()-method...");
-			}
-			
 		}
 		catch (JMSException ex) {
 			System.out.println("Error from the onMessage() method: " + ex);
