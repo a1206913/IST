@@ -8,7 +8,7 @@ import javax.jms.Message;
 import org.apache.activemq.*;
 
 /*
- * to consume messages asynchronously, we implement MessageListener and ExceptionListener
+ * to consume messages asynchronously, we implement MessageListener (acts as an asynchronous event handler for messages) and ExceptionListener
  */
 public class TravelAgent implements MessageListener, ExceptionListener {
 		private static String user = ActiveMQConnection.DEFAULT_USER;
@@ -24,6 +24,7 @@ public class TravelAgent implements MessageListener, ExceptionListener {
 		
 //		to reply to messages send by the producer (customer), we need to add a message producer
 		private MessageProducer replyToProducer;
+		
 		private MessageProducer mRequestToConsolidator1;
 		private MessageProducer mRequestToConsolidator2;
 
@@ -47,7 +48,7 @@ public class TravelAgent implements MessageListener, ExceptionListener {
 				connection.start();
 				System.out.println("3. start the connection");
 				
-//				create the session and the first queue - for the BookingQueue
+//				create the session and the first queue - to consume messages from the BookingQueue 
 				this.session = connection.createSession(false, Session.AUTO_ACKNOWLEDGE);
 				Destination bookingQueue = this.session.createQueue(subjectBooking);
 				System.out.println("4.1. create the session");
@@ -80,11 +81,13 @@ public class TravelAgent implements MessageListener, ExceptionListener {
 				 * we will get the destination (for the clients) to send to from the JMSReplyTo header field from a Message
 				 */
 				this.mRequestToConsolidator1 = this.session.createProducer(consolidatorQueue1);
+				this.mRequestToConsolidator1.setDeliveryMode(DeliveryMode.PERSISTENT);
+				
 				this.mRequestToConsolidator2 = this.session.createProducer(consolidatorQueue2);
+				this.mRequestToConsolidator2.setDeliveryMode(DeliveryMode.PERSISTENT);
 				
 //				this.replyToProducer = this.session.createProducer(null);
-				this.mRequestToConsolidator1.setDeliveryMode(DeliveryMode.PERSISTENT);
-				this.mRequestToConsolidator2.setDeliveryMode(DeliveryMode.PERSISTENT);
+//				this.replyToProducer.setDeliveryMode(DeliveryMode.NON_PERSISTENT);
 				System.out.println("7. set up the two request messages from the Airfare Consolidators");
 			}
 			catch (Exception ex) {
@@ -98,7 +101,8 @@ public class TravelAgent implements MessageListener, ExceptionListener {
 
 	/*
 	 * Passes a message to the listener (in this case, the travel agent)
-	 * A MessageListener object is used to receive asynchronously delivered messages 
+	 * A MessageListener object is used to receive asynchronously delivered messages
+	 * In the onMessage method, you define the actions to be taken when a message arrives 
 	 */
 	@Override
 	public void onMessage(Message receivedMessage) {
@@ -111,7 +115,7 @@ public class TravelAgent implements MessageListener, ExceptionListener {
 				String messageText = txtMessage.getText();
 				response.setText("REPLY TO '" + messageText);*/
 			
-//			display received message
+//			received messages from the customers
 			if (receivedMessage instanceof ObjectMessage) {
 				ObjectMessage objMessage = (ObjectMessage) receivedMessage;
 				Booking b = (Booking) objMessage.getObject();
