@@ -189,7 +189,8 @@ public class Customer implements MessageListener{
 			if (receivedMessage instanceof ObjectMessage) {
 				ObjectMessage objMessage = (ObjectMessage) receivedMessage;
 				Booking b = (Booking) objMessage.getObject();
-				System.out.println("[" + this + "] Reply Message: '" + b.consumerMessage());
+//				System.out.println("[" + this + "] Reply Message: '" + b.consumerMessage());
+				System.out.println("JMSCorrelationID: " + objMessage.getJMSCorrelationID());
 			}
 		}
 		catch (JMSException ex) {
