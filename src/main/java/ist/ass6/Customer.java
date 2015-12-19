@@ -30,8 +30,12 @@ public class Customer implements MessageListener{
 	// this will be the subjectID of our message queue
 	private static String subjectBooking = "bookingF";
 	private int custumerNr;
-	
+
+	// create an empty connection
+	private static Connection connection = null;
+	private Session session = null;
 	private MessageProducer messageProducer;
+	private Destination tempBookingQueue = null;
 
 	// constructor with one parameter, the custumerID
 	Customer(int nr) {
@@ -66,24 +70,27 @@ public class Customer implements MessageListener{
 		 * stopped.
 		 */
 
-		// create an empty connection
-		Connection connection = null;
 
-		// set up a ConnectionFactory for creating a connection to the EmbeddedBroker
+		// set up a ConnectionFactory for creating a connection to a provider through the EmbeddedBroker
 		ActiveMQConnectionFactory connectionFactory = new ActiveMQConnectionFactory(
 				user, password, url);
 		try {
-			// create the connection
+			// create and start the connection
 			connection = connectionFactory.createConnection();
 			connection.start();
 
-			// create the session (a Session object specifying transacted and
-			// acknowledgeMode)
-			Session session = connection.createSession(false,
+			// create the session for producing and consuming messages
+			session = connection.createSession(false,
 					Session.AUTO_ACKNOWLEDGE);
+
 			Destination bookingQueue = session
 					.createQueue(subjectBooking);
+			tempBookingQueue = session.createTemporaryQueue();
 
+//			Listen to incoming orders
+			/*MessageConsumer replyForBooking = session.createConsumer(bookingQueue);
+			replyForBooking.setMessageListener(this);*/
+			
 			// Setup a message producer to send message to the queue the server is
 			// consuming from
 			this.messageProducer = session.createProducer(bookingQueue);
@@ -91,21 +98,11 @@ public class Customer implements MessageListener{
 			
 			/*
 			 * in order to realize Request/Reply, we must make the producer (customer)
-			 * also a message listener and use a temporary queue for the results
-			 * 
+			 * also a message listener to listen to incoming responses from the agent
 			 */
-			/*Destination tempDest = session.createTemporaryQueue();
-			MessageConsumer responseFromConsumer = session.createConsumer(tempDest);*/
+			MessageConsumer replyFromAgent = session.createConsumer(tempBookingQueue);
+			replyFromAgent.setMessageListener(this);
 			
-//			this class will handle the messages to the temp queue as well
-//			responseFromConsumer.setMessageListener(this);
-
-			
-			// ONLY for TEST ***** create the actual message that you want to send
-			/*TextMessage txtMessage = session.createTextMessage();
-			txtMessage.setText("Hello messaging! - from Customer[" + getCustumerNumber() + "]");
-			System.out.println("Sending text message to the agent: " + txtMessage.getText());*/
-
 			/*
 			 * create the actual message that you want to send to the Agent 
 			 * this messages are generated randomly by calling the method
@@ -121,26 +118,42 @@ public class Customer implements MessageListener{
 //			create the actual message as Object messages
 			ObjectMessage objMessage = session.createObjectMessage(fBooking);
 			
-
-			// to be done soon
-
 			/*
-			 * set the reply to the temp queue we created
-			 * this is the queue the server will respond to
+			 * add the JMSReplyTo field in the message, so that the agent knows where to reply the messages
 			 */
-//			txtMessage.setJMSReplyTo(tempDest);
+			objMessage.setJMSReplyTo(tempBookingQueue);
 			
 			/*
 			 * set a correlation ID, so when you get a response you know which sent
 			 * message the response is for
 			 * send the message to the consumer
 			 */
-			String correlationID = this.createRandomString();
-			objMessage.setJMSCorrelationID(correlationID);
+//			String correlationID = this.createRandomString();
+//			objMessage.setJMSCorrelationID(correlationID);
+			
+			
 			this.messageProducer.send(objMessage);
 		} catch (JMSException ex) {
 			ex.printStackTrace();
 		}
+		/*
+		 * Before an application completes, you must close any connections you have created. 
+		 * Failure to close a connection can cause resources not to be released by the JMS provider. 
+		 * Closing a connection also closes its sessions and their message producers and message consumers.
+		 */
+		/*finally {
+			if (connection != null) {
+				try {
+					System.out.println("Closing connection....");
+					connection.close();
+				}
+				catch (JMSException e) {
+					System.out.println("Exception in constructor()" + e);
+					e.printStackTrace();
+				}
+					
+			}
+		} */
 	}
 
 	public static void main(String[] args) {
@@ -148,18 +161,26 @@ public class Customer implements MessageListener{
 		for (int i = 1; i <= 5; i++) {
 			new Customer(i);
 		}
+		
+		/*
+		 * Before an application completes, you must close any connections you have created. 
+		 * Failure to close a connection can cause resources not to be released by the JMS provider. 
+		 * Closing a connection also closes its sessions and their message producers and message consumers.
+		 */
+		/*try {
+			connection.close();
+		} 
+		catch (JMSException e) {
+			System.out.println("Exception in main()" + e);
+			e.printStackTrace();
+		}*/
 	}
 
-	public void setCustomerNumber(int nr) {
-		this.custumerNr = nr;
-	}
-	public int getCustumerNumber() {
-		return this.custumerNr;
-	}
 
 	/*
 	 * Passes a message to the listener (in this case, the customer)
 	 * A MessageListener object is used to receive asynchronously delivered messages 
+	 * It defines the actions to be taken when a message arrives
 	 */
 	@Override
 	public void onMessage(Message receivedMessage) {
@@ -168,7 +189,7 @@ public class Customer implements MessageListener{
 			if (receivedMessage instanceof ObjectMessage) {
 				ObjectMessage objMessage = (ObjectMessage) receivedMessage;
 				Booking b = (Booking) objMessage.getObject();
-				System.out.println("[" + this + "] Reply Message: '");
+				System.out.println("[" + this + "] Reply Message: '" + b.consumerMessage());
 			}
 		}
 		catch (JMSException ex) {
@@ -182,4 +203,11 @@ public class Customer implements MessageListener{
        long randomLong = random.nextLong();
        return Long.toHexString(randomLong);
    }
+	 
+	 public void setCustomerNumber(int nr) {
+		 this.custumerNr = nr;
+	 }
+	 public int getCustumerNumber() {
+		 return this.custumerNr;
+	 }
 }
