@@ -16,8 +16,8 @@ import javax.jms.Message;
 
 
 public class Customer implements MessageListener{
-	private static String user = ActiveMQConnection.DEFAULT_USER;
-	private static String password = ActiveMQConnection.DEFAULT_PASSWORD;
+	private String user = ActiveMQConnection.DEFAULT_USER;
+	private String password = ActiveMQConnection.DEFAULT_PASSWORD;
 
 	/*
 	 * we need to connect to a message broker 
@@ -25,17 +25,17 @@ public class Customer implements MessageListener{
 	 * and remote objects by hiding and mediating all the communication between 
 	 * the objects or components of the system
 	 */
-	private static String url = ActiveMQConnection.DEFAULT_BROKER_URL;
+	private String url = ActiveMQConnection.DEFAULT_BROKER_URL;
 
 	// this will be the subjectID of our message queue
-	private static String subjectBooking = "bookingF";
+	private String subjectBooking = "bookingF";
 	private int custumerNr;
 
 	// create an empty connection
-	private static Connection connection = null;
-	private Session session = null;
+	private Connection connection;
+	private Session session;
 	private MessageProducer messageProducer;
-	private Destination tempBookingQueue = null;
+	private Destination tempBookingQueue;
 
 	// constructor with one parameter, the custumerID
 	Customer(int nr) {
@@ -184,7 +184,7 @@ public class Customer implements MessageListener{
 	 */
 	@Override
 	public void onMessage(Message receivedMessage) {
-//		String messageFromConsumer = null;
+		// String messageFromConsumer = null;
 		try {
 			if (receivedMessage instanceof ObjectMessage) {
 				ObjectMessage objMessage = (ObjectMessage) receivedMessage;

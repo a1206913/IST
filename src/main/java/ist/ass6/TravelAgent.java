@@ -11,12 +11,12 @@ import org.apache.activemq.*;
  * to consume messages asynchronously, we implement MessageListener (acts as an asynchronous event handler for messages) and ExceptionListener
  */
 public class TravelAgent implements MessageListener, ExceptionListener {
-	private static String user = ActiveMQConnection.DEFAULT_USER;
-	private static String passwort = ActiveMQConnection.DEFAULT_PASSWORD;
-	private static String url = ActiveMQConnection.DEFAULT_BROKER_URL;
-	private static String subjectBooking = "bookingF";
-	private static String subjectConsolidator1 = "consolidator_1";
-	private static String subjectConsolidator2 = "consolidator_2";
+	private String user = ActiveMQConnection.DEFAULT_USER;
+	private String passwort = ActiveMQConnection.DEFAULT_PASSWORD;
+	private String url = ActiveMQConnection.DEFAULT_BROKER_URL;
+	private String subjectBooking = "bookingF";
+	private String subjectConsolidator1 = "consolidator_1";
+	private String subjectConsolidator2 = "consolidator_2";
 
 	private Session session;
 	// private Destination bookingQueue;
@@ -33,8 +33,7 @@ public class TravelAgent implements MessageListener, ExceptionListener {
 		try {
 			// set up a ConnectionFactory for creating a connection to the
 			// EmbeddedBroker
-			ActiveMQConnectionFactory connectionFactory = new ActiveMQConnectionFactory(
-					user, passwort, url);
+			ActiveMQConnectionFactory connectionFactory = new ActiveMQConnectionFactory(user, passwort, url);
 			System.out.println("1. set up the message queue");
 
 			// create the connection with the message queue
@@ -53,8 +52,7 @@ public class TravelAgent implements MessageListener, ExceptionListener {
 
 			// create the session and the first queue - to consume messages from
 			// the BookingQueue
-			this.session = connection.createSession(false,
-					Session.AUTO_ACKNOWLEDGE);
+			this.session = connection.createSession(false, Session.AUTO_ACKNOWLEDGE);
 			Destination bookingQueue = this.session.createQueue(subjectBooking);
 			System.out.println("4.1. create the session");
 
@@ -62,54 +60,52 @@ public class TravelAgent implements MessageListener, ExceptionListener {
 			 * create the second Queue - to produce messages for the
 			 * consolidatorQueue1
 			 */
-			Destination consolidatorQueue1 = this.session
-					.createQueue(subjectConsolidator1);
+			Destination consolidatorQueue1 = this.session.createQueue(subjectConsolidator1);
 			System.out.println("4.1. create the Queue consolidatorQueue1");
 
 			/*
 			 * create the third Queue - to produce messages for the
 			 * consolidatorQueue2
 			 */
-			Destination consolidatorQueue2 = this.session
-					.createQueue(subjectConsolidator2);
+			Destination consolidatorQueue2 = this.session.createQueue(subjectConsolidator2);
 			System.out.println("4.2. create the Queue consolidatorQueue2");
+
+			/*
+			 * Create the temporary queue for the responses from the consolidators
+			 */
+			tempConsolidatorQueue = session.createTemporaryQueue();
 
 			/*
 			 * setup a consumer to consume messages off from the booking queue
 			 * listen to incoming messages
 			 */
-			MessageConsumer messageConsumer = this.session
-					.createConsumer(bookingQueue);
-			System.out.println("5. create a consumer");
-			messageConsumer.setMessageListener(this);
-			System.out.println("6. listen to incoming messages");
-
-			
-			/*
-			 * in order to realize Request/Reply, we must make the producer (travel
-			 * agent) also a message listener to listen to incoming responses from
-			 * the airfair consolidators
-			 */
-			MessageConsumer replyFromConsolidators = session
-					.createConsumer(tempConsolidatorQueue);
-			System.out.println("5. create a consumer");
-			replyFromConsolidators.setMessageListener(this);
+			MessageConsumer messageConsumer_fromCustomer = this.session.createConsumer(bookingQueue);
+			System.out.println("5. create the booking message consumer");
+			messageConsumer_fromCustomer.setMessageListener(this);
 			System.out.println("6. listen to incoming messages");
 
 			/*
 			 * Setup two message producers to create requests to the Airfare
 			 * Consolidators
 			 */
-			this.mRequestToConsolidator1 = this.session
-					.createProducer(consolidatorQueue1);
+			this.mRequestToConsolidator1 = this.session.createProducer(consolidatorQueue1);
 			this.mRequestToConsolidator1.setDeliveryMode(DeliveryMode.PERSISTENT);
 
-			this.mRequestToConsolidator2 = this.session
-					.createProducer(consolidatorQueue2);
+			this.mRequestToConsolidator2 = this.session.createProducer(consolidatorQueue2);
 			this.mRequestToConsolidator2.setDeliveryMode(DeliveryMode.PERSISTENT);
 
-			System.out
-					.println("7. set up the two request messages from the Airfare Consolidators");
+			System.out.println("7. set up the two request messages from the Airfare Consolidators");
+
+			/*
+			 * in order to realize Request/Reply, we must make the producer (travel
+			 * agent) also a message listener to listen to incoming responses from
+			 * the airfair consolidators
+			 */
+			MessageConsumer replyFromConsolidators = this.session.createConsumer(tempConsolidatorQueue);
+			System.out.println("5. create a consumer");
+			replyFromConsolidators.setMessageListener(this);
+			System.out.println("6. listen to incoming messages");
+
 		} catch (Exception ex) {
 			ex.printStackTrace();
 		}
@@ -141,8 +137,9 @@ public class TravelAgent implements MessageListener, ExceptionListener {
 				 * ************************* // create a message producer for the
 				 * replies to the customer MessageProducer producer =
 				 * session.createProducer(receivedMessage.getJMSReplyTo()); //
-				 * ObjectMessage replyMsg = session.createObjectMessage()
-				 * objReplyMsg
+				 * ObjectMessage replyMsg = session.createObjectMessage() // every
+				 * message has a unique identifier, which is represented in the
+				 * header field JMSMessageID objReplyMsg
 				 * .setJMSCorrelationID(receivedMessage.getJMSMessageID());
 				 * producer.send(objReplyMsg); //
 				 * ***********************************
@@ -150,11 +147,17 @@ public class TravelAgent implements MessageListener, ExceptionListener {
 				 * ***********************************
 				 * *********************************
 				 */
-				// create the message for the consolidators
-				objReplyMsg = session.createObjectMessage(b);
-				objReplyMsg.setJMSReplyTo(tempConsolidatorQueue);
 
-				mRequestToConsolidator1.send(objReplyMsg);
+				// create the message for the consolidators
+				int order = 1;
+				TextMessage messageToConsolidator = session.createTextMessage("Booking Order " + order + ": " + b.consolidatorMessage());
+				// set the MessageID to the MessageID of the message received by the
+				// customer
+				messageToConsolidator.setJMSMessageID(objReplyMsg.getJMSMessageID());
+				messageToConsolidator.setJMSReplyTo(tempConsolidatorQueue);
+
+				mRequestToConsolidator1.send(messageToConsolidator);
+				order++;
 				/*
 				 * handling the messages accordingly by setting the correlationID
 				 * from the received message to be the correlationID of the response
