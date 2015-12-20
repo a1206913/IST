@@ -31,6 +31,7 @@ public class Consolidator implements MessageListener {
 			Destination consolidatorQueue1 = session.createQueue(subjectConsolidator1);
 			MessageConsumer messageConsumer1FromAgent = session.createConsumer(consolidatorQueue1);
 			messageConsumer1FromAgent.setMessageListener(this);
+			System.out.println("where do we go from here");
 
 			// create the second queue - for Consolidator2 and listen to the
 			// message requests
@@ -60,6 +61,7 @@ public class Consolidator implements MessageListener {
 
 	@Override
 	public void onMessage(Message receivedMessage) {
+		System.out.println("in the onMessage()-Method");
 		try {
 			TextMessage response = session.createTextMessage();
 
@@ -84,7 +86,7 @@ public class Consolidator implements MessageListener {
 						System.out.println("[Consolidator 2] Confirmation for Booking Order " + orderNr);
 
 					// create the response
-					response.setText("Confirmation for Booking Order " + orderNr + " received");
+					response.setText("" + orderNr);
 					
 					response.setJMSCorrelationID(receivedMessage.getJMSCorrelationID());
 					//Send the response to the Destination specified by the JMSReplyTo field of the received message,

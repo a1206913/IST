@@ -18,6 +18,7 @@ public class TravelAgent implements MessageListener, ExceptionListener {
 	private String subjectConsolidator1 = "consolidator_1";
 	private String subjectConsolidator2 = "consolidator_2";
 
+	Booking b;
 	int nrOfTicketOrders = 1;
 	
 	private Session session;
@@ -26,7 +27,7 @@ public class TravelAgent implements MessageListener, ExceptionListener {
 
 	// to reply to messages send by the producer (customer), we need to add a
 	// message producer
-	private MessageProducer replyToProducer;
+	private MessageProducer replyToCustomer;
 
 	private MessageProducer mRequestToConsolidator1;
 	private MessageProducer mRequestToConsolidator2;
@@ -79,7 +80,7 @@ public class TravelAgent implements MessageListener, ExceptionListener {
 
 			/*
 			 * setup a consumer to consume messages off from the booking queue
-			 * listen to incoming messages
+			 * listen to incoming messages FROM CUSTOMER
 			 */
 			MessageConsumer messageConsumer_fromCustomer = this.session.createConsumer(bookingQueue);
 			System.out.println("5. create the booking message consumer");
@@ -98,21 +99,22 @@ public class TravelAgent implements MessageListener, ExceptionListener {
 
 			System.out.println("7. set up the two request messages from the Airfare Consolidators");
 			
-			//Setup a message producer to respond to messages from clients, we will get the destination
-         //to send to from the JMSReplyTo header field from a Message
-			this.replyToProducer = this.session.createProducer(null);
-			this.replyToProducer.setDeliveryMode(DeliveryMode.NON_PERSISTENT);
-			
-
 			/*
 			 * in order to realize Request/Reply, we must make the producer (travel
 			 * agent) also a message listener to listen to incoming responses from
 			 * the airfair consolidators
 			 */
 			MessageConsumer replyFromConsolidators = this.session.createConsumer(tempConsolidatorQueue);
-			System.out.println("5. create a consumer");
+			System.out.println("8. create the message consumer for Consolidators");
 			replyFromConsolidators.setMessageListener(this);
-			System.out.println("6. listen to incoming messages");
+			System.out.println("9. listen to incoming messages from Consolidators");
+			
+			//Setup a message producer to respond to messages from clients, we will get the destination
+         //to send to from the JMSReplyTo header field from a Message
+			this.replyToCustomer = this.session.createProducer(null);
+			this.replyToCustomer.setDeliveryMode(DeliveryMode.NON_PERSISTENT);
+			
+
 
 		} catch (Exception ex) {
 			ex.printStackTrace();
@@ -134,10 +136,10 @@ public class TravelAgent implements MessageListener, ExceptionListener {
 	public void onMessage(Message receivedMessage) {
 		System.out.println("in the onMessage()-method");
 		try {
-			// received messages from the customers
+			// received messages from the CUSTOMERS
 			if (receivedMessage instanceof ObjectMessage) {
 				ObjectMessage objReplyMsg = (ObjectMessage) receivedMessage;
-				Booking b = (Booking) objReplyMsg.getObject();
+				b = (Booking) objReplyMsg.getObject();
 				System.out.println("Received order for " + b.getCustomer());
 				/*
 				 * // ***************** everything between the stars goes somewhere
@@ -156,22 +158,24 @@ public class TravelAgent implements MessageListener, ExceptionListener {
 				 * *********************************
 				 */
 
+				produceMessageForConsolidators(objReplyMsg);
+/*//				produce the messages for the CONSOLIDATORS
 				String consolidatorName = "Consolidator 2"; 
 //				split the messages for the two consolidators
 				if (b.getDestination().contains("Austria")) {
 					consolidatorName = "Consolidator 1";
-				}
+				}*/
 				
-				// create the message for the consolidators
+				/*// create the message for the consolidators
 				TextMessage messageToConsolidator = session.createTextMessage(nrOfTicketOrders + ": " + b.consolidatorMessage());
-				// set the MessageID to the MessageID of the message received by the
-				// customer
+				// set the MessageID to the MessageID of the message received by the customer
 				messageToConsolidator.setJMSMessageID(objReplyMsg.getJMSMessageID());
 				messageToConsolidator.setJMSReplyTo(tempConsolidatorQueue);
 
 				mRequestToConsolidator1.send(messageToConsolidator);
 				System.out.println("Booking Order " + nrOfTicketOrders + ": " + b.consolidatorMessage() + " (forwarded to " + consolidatorName + ")");
-				nrOfTicketOrders++;
+				nrOfTicketOrders++;*/
+				
 				/*
 				 * handling the messages accordingly by setting the correlationID
 				 * from the received message to be the correlationID of the response
@@ -190,6 +194,14 @@ public class TravelAgent implements MessageListener, ExceptionListener {
 				// this.mRequestToConsolidator1.send(receivedMessage.getJMSReplyTo(),
 				// txtMessageToC1);
 			}
+			
+			else if (receivedMessage instanceof TextMessage) {
+				System.out.println("IF instanceof");
+				TextMessage responseFromConsolidator = session.createTextMessage();
+				String messageFromConsolidator = ((TextMessage) receivedMessage).getText();
+				int orderNr = Integer.parseInt(messageFromConsolidator);
+				System.out.println("Confirmation for Booking Order " + orderNr + " received");
+			}
 
 			// received message from producer
 			// System.out.println("Received message: " + txtMessage.getText());
@@ -201,6 +213,34 @@ public class TravelAgent implements MessageListener, ExceptionListener {
 		}
 	}
 
+	public void produceMessageForConsolidators(Message objReplyMsg) {
+//		produce the messages for the CONSOLIDATORS
+		String consolidatorName = "Consolidator 2";
+		
+//		split the messages for the two consolidators
+		try {
+		// create the message for the consolidators
+			TextMessage messageToConsolidator = session.createTextMessage(nrOfTicketOrders + ": " + b.consolidatorMessage());
+			
+			// set the MessageID to the MessageID of the message received by the customer
+			messageToConsolidator.setJMSMessageID(objReplyMsg.getJMSMessageID());
+			messageToConsolidator.setJMSReplyTo(tempConsolidatorQueue);
+	
+			if (b.getDestination().contains("Austria")) {
+				consolidatorName = "Consolidator 1";
+				mRequestToConsolidator1.send(messageToConsolidator);
+			}
+			else
+				mRequestToConsolidator2.send(messageToConsolidator);
+			
+			System.out.println("Booking Order " + nrOfTicketOrders + ": " + b.consolidatorMessage() + " (forwarded to " + consolidatorName + ")");
+			nrOfTicketOrders++;
+		}
+		catch (JMSException ex) {
+			ex.printStackTrace();
+		}
+	}
+	
 	@Override
 	public void onException(JMSException ex) {
 		System.out.println("Error from the onException() method " + ex);

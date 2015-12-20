@@ -14,16 +14,15 @@ import org.apache.activemq.*;
 import javax.jms.*;
 import javax.jms.Message;
 
-
-public class Customer implements MessageListener{
+public class Customer implements MessageListener {
 	private String user = ActiveMQConnection.DEFAULT_USER;
 	private String password = ActiveMQConnection.DEFAULT_PASSWORD;
 
 	/*
-	 * we need to connect to a message broker 
-	 * a broker it enables the exchange of requests and responses between client 
-	 * and remote objects by hiding and mediating all the communication between 
-	 * the objects or components of the system
+	 * we need to connect to a message broker a broker it enables the exchange of
+	 * requests and responses between client and remote objects by hiding and
+	 * mediating all the communication between the objects or components of the
+	 * system
 	 */
 	private String url = ActiveMQConnection.DEFAULT_BROKER_URL;
 
@@ -70,117 +69,98 @@ public class Customer implements MessageListener{
 		 * stopped.
 		 */
 
-
-		// set up a ConnectionFactory for creating a connection to a provider through the EmbeddedBroker
-		ActiveMQConnectionFactory connectionFactory = new ActiveMQConnectionFactory(
-				user, password, url);
+		// set up a ConnectionFactory for creating a connection to a provider
+		// through the EmbeddedBroker
+		ActiveMQConnectionFactory connectionFactory = new ActiveMQConnectionFactory(user, password, url);
 		try {
 			// create and start the connection
 			connection = connectionFactory.createConnection();
 			connection.start();
 
 			// create the session for producing and consuming messages
-			session = connection.createSession(false,
-					Session.AUTO_ACKNOWLEDGE);
+			session = connection.createSession(false, Session.AUTO_ACKNOWLEDGE);
 
-			Destination bookingQueue = session
-					.createQueue(subjectBooking);
+			Destination bookingQueue = session.createQueue(subjectBooking);
 			tempBookingQueue = session.createTemporaryQueue();
 
-//			Listen to incoming orders
-			/*MessageConsumer replyForBooking = session.createConsumer(bookingQueue);
-			replyForBooking.setMessageListener(this);*/
-			
+
 			// Setup a message producer to send message to the queue the server is
 			// consuming from
 			this.messageProducer = session.createProducer(bookingQueue);
 			this.messageProducer.setDeliveryMode(DeliveryMode.PERSISTENT);
-			
+
 			/*
-			 * in order to realize Request/Reply, we must make the producer (customer)
-			 * also a message listener to listen to incoming responses from the agent
+			 * in order to realize Request/Reply, we must make the producer
+			 * (customer) also a message listener to listen to incoming responses
+			 * from the agent
 			 */
-			MessageConsumer replyFromAgent = session.createConsumer(tempBookingQueue);
-			replyFromAgent.setMessageListener(this);
-			
+			MessageConsumer consumeFromAgent = session.createConsumer(tempBookingQueue);
+			consumeFromAgent.setMessageListener(this);
+
 			/*
-			 * create the actual message that you want to send to the Agent 
-			 * this messages are generated randomly by calling the method
-			 * getRandomBooking() of the class BookingGenerator 
-			 * this method (getRandomBooking) generates random booking orders from a set of
+			 * create the actual message that you want to send to the Agent this
+			 * messages are generated randomly by calling the method
+			 * getRandomBooking() of the class BookingGenerator this method
+			 * (getRandomBooking) generates random booking orders from a set of
 			 * booking instances
 			 */
 			String customer = "Customer " + getCustumerNumber();
 			Booking fBooking = BookingGenerator.getRandomBooking(customer);
 			System.out.println(fBooking.consumerMessage());
-			
-			
-//			create the actual message as Object messages
+
+			// create the actual message as Object messages
 			ObjectMessage objMessage = session.createObjectMessage(fBooking);
-			
+
 			/*
-			 * add the JMSReplyTo field in the message, so that the agent knows where to reply the messages
+			 * add the JMSReplyTo field in the message, so that the agent knows
+			 * where to reply the messages
 			 */
 			objMessage.setJMSReplyTo(tempBookingQueue);
-			
+
 			/*
 			 * set a correlation ID, so when you get a response you know which sent
-			 * message the response is for
-			 * send the message to the consumer
+			 * message the response is for send the message to the consumer
 			 */
-//			String correlationID = this.createRandomString();
-//			objMessage.setJMSCorrelationID(correlationID);
-			
-			
+			// String correlationID = this.createRandomString();
+			// objMessage.setJMSCorrelationID(correlationID);
+
 			this.messageProducer.send(objMessage);
 		} catch (JMSException ex) {
 			ex.printStackTrace();
 		}
-		/*
-		 * Before an application completes, you must close any connections you have created. 
-		 * Failure to close a connection can cause resources not to be released by the JMS provider. 
-		 * Closing a connection also closes its sessions and their message producers and message consumers.
-		 */
-		/*finally {
-			if (connection != null) {
-				try {
-					System.out.println("Closing connection....");
-					connection.close();
-				}
-				catch (JMSException e) {
-					System.out.println("Exception in constructor()" + e);
-					e.printStackTrace();
-				}
-					
-			}
-		} */
 	}
 
 	public static void main(String[] args) {
 		// start the ten clients
-		for (int i = 1; i <= 5; i++) {
+		for (int i = 1; i <= 2; i++) {
 			new Customer(i);
 		}
-		
+
 		/*
-		 * Before an application completes, you must close any connections you have created. 
-		 * Failure to close a connection can cause resources not to be released by the JMS provider. 
-		 * Closing a connection also closes its sessions and their message producers and message consumers.
+		 * Before an application completes, you must close any connections you
+		 * have created. Failure to close a connection can cause resources not to
+		 * be released by the JMS provider. Closing a connection also closes its
+		 * sessions and their message producers and message consumers.
 		 */
-		/*try {
-			connection.close();
-		} 
-		catch (JMSException e) {
-			System.out.println("Exception in main()" + e);
-			e.printStackTrace();
-		}*/
+		/*finally {
+		if (connection != null) {
+			try {
+				System.out.println("Closing connection....");
+				connection.close();
+			}
+			catch (JMSException e) {
+				System.out.println("Exception in constructor()" + e);
+				e.printStackTrace();
+			}
+				
+		}
+	} */
 	}
 
-
 	/*
-	 * Passes a message to the listener (in this case, the customer)
-	 * A MessageListener object is used to receive asynchronously delivered messages 
-	 * It defines the actions to be taken when a message arrives
+	 * Passes a message to the listener (in this case, the customer) A
+	 * MessageListener object is used to receive asynchronously delivered
+	 * messages It defines the actions to be taken when a message arrives
 	 */
 	@Override
 	public void onMessage(Message receivedMessage) {
@@ -189,26 +169,27 @@ public class Customer implements MessageListener{
 			if (receivedMessage instanceof ObjectMessage) {
 				ObjectMessage objMessage = (ObjectMessage) receivedMessage;
 				Booking b = (Booking) objMessage.getObject();
-//				System.out.println("[" + this + "] Reply Message: '" + b.consumerMessage());
+				// System.out.println("[" + this + "] Reply Message: '" +
+				// b.consumerMessage());
 				System.out.println("JMSCorrelationID: " + objMessage.getJMSCorrelationID());
 			}
-		}
-		catch (JMSException ex) {
+		} catch (JMSException ex) {
 			System.out.println("from the onMessage() method " + ex);
 			ex.printStackTrace();
 		}
 	}
-	
-	 private String createRandomString() {
-       Random random = new Random(System.currentTimeMillis());
-       long randomLong = random.nextLong();
-       return Long.toHexString(randomLong);
-   }
-	 
-	 public void setCustomerNumber(int nr) {
-		 this.custumerNr = nr;
-	 }
-	 public int getCustumerNumber() {
-		 return this.custumerNr;
-	 }
+
+	private String createRandomString() {
+		Random random = new Random(System.currentTimeMillis());
+		long randomLong = random.nextLong();
+		return Long.toHexString(randomLong);
+	}
+
+	public void setCustomerNumber(int nr) {
+		this.custumerNr = nr;
+	}
+
+	public int getCustumerNumber() {
+		return this.custumerNr;
+	}
 }
