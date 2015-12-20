@@ -23,7 +23,7 @@ public class TravelAgent implements MessageListener, ExceptionListener {
 
 	private Booking b;
 	private int nrOfTicketOrders = 1;
-	private HashMap hm = new HashMap();
+	private HashMap hm = new HashMap<Integer, ObjectMessage>();
 	
 	private Session session;
 	// private Destination bookingQueue;
@@ -41,11 +41,9 @@ public class TravelAgent implements MessageListener, ExceptionListener {
 			// set up a ConnectionFactory for creating a connection to the
 			// EmbeddedBroker
 			ActiveMQConnectionFactory connectionFactory = new ActiveMQConnectionFactory(user, passwort, url);
-			System.out.println("1. set up the message queue");
 
 			// create the connection with the message queue
 			Connection connection = connectionFactory.createConnection();
-			System.out.println("2. create the connection");
 			/*
 			 * set an ExceptionListener for this connection it allows a client to
 			 * be notified of a problem asynchronously it does this by calling the
@@ -55,27 +53,23 @@ public class TravelAgent implements MessageListener, ExceptionListener {
 			connection.setExceptionListener(this);
 
 			connection.start();
-			System.out.println("3. start the connection");
 
 			// create the session and the first queue - to consume messages from
 			// the BookingQueue
 			this.session = connection.createSession(false, Session.AUTO_ACKNOWLEDGE);
 			Destination bookingQueue = this.session.createQueue(subjectBooking);
-			System.out.println("4.1. create the session");
 
 			/*
 			 * create the second Queue - to produce messages for the
 			 * consolidatorQueue1
 			 */
 			Destination consolidatorQueue1 = this.session.createQueue(subjectConsolidator1);
-			System.out.println("4.1. create the Queue consolidatorQueue1");
 
 			/*
 			 * create the third Queue - to produce messages for the
 			 * consolidatorQueue2
 			 */
 			Destination consolidatorQueue2 = this.session.createQueue(subjectConsolidator2);
-			System.out.println("4.2. create the Queue consolidatorQueue2");
 
 			/*
 			 * Create the temporary queue for the responses from the consolidators
@@ -87,9 +81,7 @@ public class TravelAgent implements MessageListener, ExceptionListener {
 			 * listen to incoming messages FROM CUSTOMER
 			 */
 			MessageConsumer messageConsumer_fromCustomer = this.session.createConsumer(bookingQueue);
-			System.out.println("5. create the booking message consumer");
 			messageConsumer_fromCustomer.setMessageListener(this);
-			System.out.println("6. listen to incoming messages");
 
 			/*
 			 * Setup two message producers to create requests to the Airfare
@@ -100,8 +92,6 @@ public class TravelAgent implements MessageListener, ExceptionListener {
 
 			this.mRequestToConsolidator2 = this.session.createProducer(consolidatorQueue2);
 			this.mRequestToConsolidator2.setDeliveryMode(DeliveryMode.PERSISTENT);
-
-			System.out.println("7. set up the two request messages from the Airfare Consolidators");
 			
 			/*
 			 * in order to realize Request/Reply, we must make the producer (travel
@@ -109,9 +99,7 @@ public class TravelAgent implements MessageListener, ExceptionListener {
 			 * the airfair consolidators
 			 */
 			MessageConsumer replyFromConsolidators = this.session.createConsumer(tempConsolidatorQueue);
-			System.out.println("8. create the message consumer for Consolidators");
 			replyFromConsolidators.setMessageListener(this);
-			System.out.println("9. listen to incoming messages from Consolidators");
 			
 			//Setup a message producer to respond to messages from clients, we will get the destination
          //to send to from the JMSReplyTo header field from a Message
@@ -126,7 +114,6 @@ public class TravelAgent implements MessageListener, ExceptionListener {
 	}
 
 	public static void main(String[] args) {
-		System.out.println("TravelAgent: in the main()-method");
 		new TravelAgent();
 	}
 
@@ -138,7 +125,6 @@ public class TravelAgent implements MessageListener, ExceptionListener {
 	 */
 	@Override
 	public void onMessage(Message receivedMessage) {
-		System.out.println("in the onMessage()-method");
 		try {
 			// received messages from the CUSTOMERS
 			if (receivedMessage instanceof ObjectMessage) {
@@ -151,7 +137,6 @@ public class TravelAgent implements MessageListener, ExceptionListener {
 			}
 			
 			else if (receivedMessage instanceof TextMessage) {
-				System.out.println("IF instanceof");
 				TextMessage responseFromConsolidator = session.createTextMessage();
 				String messageFromConsolidator = ((TextMessage) receivedMessage).getText();
 				int orderNr = Integer.parseInt(messageFromConsolidator);
@@ -162,11 +147,6 @@ public class TravelAgent implements MessageListener, ExceptionListener {
 					produceMessageForCustomer(oM);
 				}
 			}
-
-			// received message from producer
-			// System.out.println("Received message: " + txtMessage.getText());
-
-			System.out.println("the end of the onMessage()-method...");
 		} catch (JMSException ex) {
 			System.out.println("Error from the onMessage() method: " + ex);
 			ex.printStackTrace();
@@ -212,8 +192,6 @@ public class TravelAgent implements MessageListener, ExceptionListener {
 			
 			ObjectMessage replyMsg = session.createObjectMessage(tempBooking);
 			replyMsg.setJMSCorrelationID(receivedMessage.getJMSCorrelationID());
-			
-			System.out.println("JMSCorrelationID: " + replyMsg.getJMSCorrelationID());
 			
 			producer.send(replyMsg); 
 			System.out.println("Notyfying " + tempBooking.getCustomer());

@@ -28,7 +28,6 @@ public class Consolidator implements MessageListener {
 
 			// create the first queue - for Consolidator1
 			Destination consolidatorQueue1 = session.createQueue(subjectConsolidator1);
-			System.out.println("where do we go from here");
 
 			// create the second queue - for Consolidator2 
 			Destination consolidatorQueue2 = session.createQueue(subjectConsolidator2);
@@ -61,13 +60,11 @@ public class Consolidator implements MessageListener {
 
 	@Override
 	public void onMessage(Message receivedMessage) {
-		System.out.println("in the onMessage()-Method");
 		try {
 			TextMessage response = session.createTextMessage();
 
 			if (receivedMessage instanceof TextMessage) {
 				String messageFromAgent = ((TextMessage) receivedMessage).getText();
-				System.out.println(messageFromAgent);
 
 				// get the needed data out of the message
 				try {

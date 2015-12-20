@@ -132,7 +132,7 @@ public class Customer implements MessageListener {
 
 	public static void main(String[] args) {
 		// start the ten clients
-		for (int i = 1; i <= 2; i++) {
+		for (int i = 1; i <= 10; i++) {
 			new Customer(i);
 		}
 
@@ -164,14 +164,11 @@ public class Customer implements MessageListener {
 	 */
 	@Override
 	public void onMessage(Message receivedMessage) {
-		// String messageFromConsumer = null;
 		try {
 			if (receivedMessage instanceof ObjectMessage) {
 				ObjectMessage objMessage = (ObjectMessage) receivedMessage;
 				Booking b = (Booking) objMessage.getObject();
-				// System.out.println("[" + this + "] Reply Message: '" +
-				// b.consumerMessage());
-				System.out.println("JMSCorrelationID: " + objMessage.getJMSCorrelationID());
+
 				System.out.println("Confirmation of booking for " + b.getCustomer());
 			}
 		} catch (JMSException ex) {
