@@ -13,7 +13,7 @@ import org.apache.activemq.*;
 /*
  * to consume messages asynchronously, we implement MessageListener (acts as an asynchronous event handler for messages) and ExceptionListener
  */
-public class TravelAgent implements MessageListener, ExceptionListener {
+public class TravelAgent implements MessageListener {
 	private String user = ActiveMQConnection.DEFAULT_USER;
 	private String passwort = ActiveMQConnection.DEFAULT_PASSWORD;
 	private String url = ActiveMQConnection.DEFAULT_BROKER_URL;
@@ -50,7 +50,6 @@ public class TravelAgent implements MessageListener, ExceptionListener {
 			 * listener's onException method, passing it a JMSException object
 			 * describing the problem
 			 */
-			connection.setExceptionListener(this);
 
 			connection.start();
 
@@ -199,10 +198,5 @@ public class TravelAgent implements MessageListener, ExceptionListener {
 		catch (JMSException ex) {
 			ex.printStackTrace();
 		}
-	}
-	
-	@Override
-	public void onException(JMSException ex) {
-		System.out.println("Error from the onException() method " + ex);
 	}
 }

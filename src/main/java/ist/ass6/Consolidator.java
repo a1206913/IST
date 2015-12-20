@@ -98,15 +98,6 @@ public class Consolidator implements MessageListener {
 					System.out.println("Symbol cannot be parsed into an int " + ex);
 					ex.printStackTrace();
 				}
-
-				/*
-				 * in order to realize Request/Reply, we must make the listeners
-				 * (consolidators) also message producers, to reply to the messages
-				 * from the airfair consolidators
-				 */
-				MessageProducer replyFromConsolidators = session.createProducer(receivedMessage.getJMSReplyTo());
-				response.setJMSCorrelationID(receivedMessage.getJMSCorrelationID());
-				replyFromConsolidators.send(response);
 			}
 		} catch (JMSException ex) {
 			System.out.println("Error from the onMessage() - method " + ex);

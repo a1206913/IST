@@ -132,7 +132,7 @@ public class Customer implements MessageListener {
 
 	public static void main(String[] args) {
 		// start the ten clients
-		for (int i = 1; i <= 10; i++) {
+		for (int i = 1; i <= 2; i++) {
 			new Customer(i);
 		}
 
