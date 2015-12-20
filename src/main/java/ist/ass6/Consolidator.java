@@ -16,6 +16,7 @@ public class Consolidator implements MessageListener {
 
 	private Session session;
 	private Destination tempConsolidatorQueue;
+	private MessageProducer replyProducer;
 
 	public Consolidator() {
 		try {
@@ -36,6 +37,11 @@ public class Consolidator implements MessageListener {
 			Destination consolidatorQueue2 = session.createQueue(subjectConsolidator2);
 			MessageConsumer messageConsumer2FromAgent = session.createConsumer(consolidatorQueue2);
 			messageConsumer2FromAgent.setMessageListener(this);
+			
+			//Setup a message producer to respond to messages from clients, we will get the destination
+         //to send to from the JMSReplyTo header field from a Message
+			this.replyProducer = this.session.createProducer(null);
+			this.replyProducer.setDeliveryMode(DeliveryMode.NON_PERSISTENT);
 
 			/*
 			 * Create the temporary queue for the responses from the consolidators
@@ -79,6 +85,12 @@ public class Consolidator implements MessageListener {
 
 					// create the response
 					response.setText("Confirmation for Booking Order " + orderNr + " received");
+					
+					response.setJMSCorrelationID(receivedMessage.getJMSCorrelationID());
+					//Send the response to the Destination specified by the JMSReplyTo field of the received message,
+	            //this is presumably a temporary queue created by the client
+	            this.replyProducer.send(receivedMessage.getJMSReplyTo(), response);
+					
 				} catch (IndexOutOfBoundsException ex) {
 					System.out.println("A problem with the substring " + ex);
 					ex.printStackTrace();

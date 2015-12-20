@@ -18,6 +18,8 @@ public class TravelAgent implements MessageListener, ExceptionListener {
 	private String subjectConsolidator1 = "consolidator_1";
 	private String subjectConsolidator2 = "consolidator_2";
 
+	int nrOfTicketOrders = 1;
+	
 	private Session session;
 	// private Destination bookingQueue;
 	private Destination tempConsolidatorQueue;
@@ -95,6 +97,12 @@ public class TravelAgent implements MessageListener, ExceptionListener {
 			this.mRequestToConsolidator2.setDeliveryMode(DeliveryMode.PERSISTENT);
 
 			System.out.println("7. set up the two request messages from the Airfare Consolidators");
+			
+			//Setup a message producer to respond to messages from clients, we will get the destination
+         //to send to from the JMSReplyTo header field from a Message
+			this.replyToProducer = this.session.createProducer(null);
+			this.replyToProducer.setDeliveryMode(DeliveryMode.NON_PERSISTENT);
+			
 
 			/*
 			 * in order to realize Request/Reply, we must make the producer (travel
@@ -148,7 +156,6 @@ public class TravelAgent implements MessageListener, ExceptionListener {
 				 * *********************************
 				 */
 
-				int order = 1;
 				String consolidatorName = "Consolidator 2"; 
 //				split the messages for the two consolidators
 				if (b.getDestination().contains("Austria")) {
@@ -156,15 +163,15 @@ public class TravelAgent implements MessageListener, ExceptionListener {
 				}
 				
 				// create the message for the consolidators
-				TextMessage messageToConsolidator = session.createTextMessage(order + ": " + b.consolidatorMessage());
+				TextMessage messageToConsolidator = session.createTextMessage(nrOfTicketOrders + ": " + b.consolidatorMessage());
 				// set the MessageID to the MessageID of the message received by the
 				// customer
 				messageToConsolidator.setJMSMessageID(objReplyMsg.getJMSMessageID());
 				messageToConsolidator.setJMSReplyTo(tempConsolidatorQueue);
 
 				mRequestToConsolidator1.send(messageToConsolidator);
-				System.out.println("Booking Order " + order + ": " + b.consolidatorMessage() + " (forwarded to " + consolidatorName + ")");
-				order++;
+				System.out.println("Booking Order " + nrOfTicketOrders + ": " + b.consolidatorMessage() + " (forwarded to " + consolidatorName + ")");
+				nrOfTicketOrders++;
 				/*
 				 * handling the messages accordingly by setting the correlationID
 				 * from the received message to be the correlationID of the response
