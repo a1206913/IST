@@ -1,5 +1,8 @@
 package ist.ass6;
 
+import java.util.HashMap;
+import java.util.Iterator;
+
 import ist.ass6.model.Booking;
 
 import javax.jms.*;
@@ -18,8 +21,9 @@ public class TravelAgent implements MessageListener, ExceptionListener {
 	private String subjectConsolidator1 = "consolidator_1";
 	private String subjectConsolidator2 = "consolidator_2";
 
-	Booking b;
-	int nrOfTicketOrders = 1;
+	private Booking b;
+	private int nrOfTicketOrders = 1;
+	private HashMap hm = new HashMap();
 	
 	private Session session;
 	// private Destination bookingQueue;
@@ -141,58 +145,9 @@ public class TravelAgent implements MessageListener, ExceptionListener {
 				ObjectMessage objReplyMsg = (ObjectMessage) receivedMessage;
 				b = (Booking) objReplyMsg.getObject();
 				System.out.println("Received order for " + b.getCustomer());
-				/*
-				 * // ***************** everything between the stars goes somewhere
-				 * else - this part is the reply for the customer
-				 * ************************* // create a message producer for the
-				 * replies to the customer MessageProducer producer =
-				 * session.createProducer(receivedMessage.getJMSReplyTo()); //
-				 * ObjectMessage replyMsg = session.createObjectMessage() // every
-				 * message has a unique identifier, which is represented in the
-				 * header field JMSMessageID objReplyMsg
-				 * .setJMSCorrelationID(receivedMessage.getJMSMessageID());
-				 * producer.send(objReplyMsg); //
-				 * ***********************************
-				 * *******************************
-				 * ***********************************
-				 * *********************************
-				 */
 
 				produceMessageForConsolidators(objReplyMsg);
-/*//				produce the messages for the CONSOLIDATORS
-				String consolidatorName = "Consolidator 2"; 
-//				split the messages for the two consolidators
-				if (b.getDestination().contains("Austria")) {
-					consolidatorName = "Consolidator 1";
-				}*/
 				
-				/*// create the message for the consolidators
-				TextMessage messageToConsolidator = session.createTextMessage(nrOfTicketOrders + ": " + b.consolidatorMessage());
-				// set the MessageID to the MessageID of the message received by the customer
-				messageToConsolidator.setJMSMessageID(objReplyMsg.getJMSMessageID());
-				messageToConsolidator.setJMSReplyTo(tempConsolidatorQueue);
-
-				mRequestToConsolidator1.send(messageToConsolidator);
-				System.out.println("Booking Order " + nrOfTicketOrders + ": " + b.consolidatorMessage() + " (forwarded to " + consolidatorName + ")");
-				nrOfTicketOrders++;*/
-				
-				/*
-				 * handling the messages accordingly by setting the correlationID
-				 * from the received message to be the correlationID of the response
-				 * message
-				 * 
-				 * this lets the customer identify to which message the received
-				 * response belongs to
-				 */
-				// txtMessageToC1.setJMSCorrelationID(receivedMessage.getJMSCorrelationID());
-
-				/*
-				 * Send the response to the Destination specified by the JMSReplyTo
-				 * field of the received message, this is presumably a temporary
-				 * queue created by the client
-				 */
-				// this.mRequestToConsolidator1.send(receivedMessage.getJMSReplyTo(),
-				// txtMessageToC1);
 			}
 			
 			else if (receivedMessage instanceof TextMessage) {
@@ -201,6 +156,11 @@ public class TravelAgent implements MessageListener, ExceptionListener {
 				String messageFromConsolidator = ((TextMessage) receivedMessage).getText();
 				int orderNr = Integer.parseInt(messageFromConsolidator);
 				System.out.println("Confirmation for Booking Order " + orderNr + " received");
+				
+				if(hm.containsKey(orderNr)) {
+					ObjectMessage oM = (ObjectMessage) hm.get(orderNr);
+					produceMessageForCustomer(oM);
+				}
 			}
 
 			// received message from producer
@@ -213,7 +173,7 @@ public class TravelAgent implements MessageListener, ExceptionListener {
 		}
 	}
 
-	public void produceMessageForConsolidators(Message objReplyMsg) {
+	public void produceMessageForConsolidators(ObjectMessage objReplyMsg) {
 //		produce the messages for the CONSOLIDATORS
 		String consolidatorName = "Consolidator 2";
 		
@@ -222,10 +182,13 @@ public class TravelAgent implements MessageListener, ExceptionListener {
 		// create the message for the consolidators
 			TextMessage messageToConsolidator = session.createTextMessage(nrOfTicketOrders + ": " + b.consolidatorMessage());
 			
-			// set the MessageID to the MessageID of the message received by the customer
-			messageToConsolidator.setJMSMessageID(objReplyMsg.getJMSMessageID());
+			// set the JMSCorrelationID to the JMSCorrelationID of the message received by the customer
 			messageToConsolidator.setJMSReplyTo(tempConsolidatorQueue);
+			messageToConsolidator.setJMSCorrelationID(objReplyMsg.getJMSCorrelationID());
 	
+//			hashmap
+			hm.put(nrOfTicketOrders, objReplyMsg);
+			
 			if (b.getDestination().contains("Austria")) {
 				consolidatorName = "Consolidator 1";
 				mRequestToConsolidator1.send(messageToConsolidator);
@@ -235,6 +198,25 @@ public class TravelAgent implements MessageListener, ExceptionListener {
 			
 			System.out.println("Booking Order " + nrOfTicketOrders + ": " + b.consolidatorMessage() + " (forwarded to " + consolidatorName + ")");
 			nrOfTicketOrders++;
+		}
+		catch (JMSException ex) {
+			ex.printStackTrace();
+		}
+	}
+	
+	public void produceMessageForCustomer(ObjectMessage receivedMessage) {
+//		create a message producer for the replies to the customer 
+		try {
+			MessageProducer producer = session.createProducer(receivedMessage.getJMSReplyTo());
+			Booking tempBooking = (Booking) receivedMessage.getObject();
+			
+			ObjectMessage replyMsg = session.createObjectMessage(tempBooking);
+			replyMsg.setJMSCorrelationID(receivedMessage.getJMSCorrelationID());
+			
+			System.out.println("JMSCorrelationID: " + replyMsg.getJMSCorrelationID());
+			
+			producer.send(replyMsg); 
+			System.out.println("Notyfying " + tempBooking.getCustomer());
 		}
 		catch (JMSException ex) {
 			ex.printStackTrace();

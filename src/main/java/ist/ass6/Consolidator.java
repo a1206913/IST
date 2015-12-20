@@ -15,8 +15,8 @@ public class Consolidator implements MessageListener {
 	private String subjectConsolidator2 = "consolidator_2";
 
 	private Session session;
-	private Destination tempConsolidatorQueue;
-	private MessageProducer replyProducer;
+//	private Destination tempConsolidatorQueue;
+	private MessageProducer replyToAgent;
 
 	public Consolidator() {
 		try {
@@ -26,28 +26,28 @@ public class Consolidator implements MessageListener {
 
 			session = connection.createSession(false, Session.AUTO_ACKNOWLEDGE);
 
-			// create the first queue - for Consolidator1 and listen to the message
-			// requests
+			// create the first queue - for Consolidator1
 			Destination consolidatorQueue1 = session.createQueue(subjectConsolidator1);
-			MessageConsumer messageConsumer1FromAgent = session.createConsumer(consolidatorQueue1);
-			messageConsumer1FromAgent.setMessageListener(this);
 			System.out.println("where do we go from here");
 
-			// create the second queue - for Consolidator2 and listen to the
-			// message requests
+			// create the second queue - for Consolidator2 
 			Destination consolidatorQueue2 = session.createQueue(subjectConsolidator2);
-			MessageConsumer messageConsumer2FromAgent = session.createConsumer(consolidatorQueue2);
-			messageConsumer2FromAgent.setMessageListener(this);
 			
 			//Setup a message producer to respond to messages from clients, we will get the destination
          //to send to from the JMSReplyTo header field from a Message
-			this.replyProducer = this.session.createProducer(null);
-			this.replyProducer.setDeliveryMode(DeliveryMode.NON_PERSISTENT);
+			this.replyToAgent = this.session.createProducer(null);
+			this.replyToAgent.setDeliveryMode(DeliveryMode.NON_PERSISTENT);
 
 			/*
 			 * Create the temporary queue for the responses from the consolidators
 			 */
-			tempConsolidatorQueue = session.createTemporaryQueue();
+//			tempConsolidatorQueue = session.createTemporaryQueue();
+			
+			MessageConsumer messageConsumer1FromAgent = session.createConsumer(consolidatorQueue1);
+			messageConsumer1FromAgent.setMessageListener(this);
+			
+			MessageConsumer messageConsumer2FromAgent = session.createConsumer(consolidatorQueue2);
+			messageConsumer2FromAgent.setMessageListener(this);
 
 		} catch (Exception ex) {
 			System.out.println("Error in the constructor" + ex);
@@ -69,7 +69,7 @@ public class Consolidator implements MessageListener {
 				String messageFromAgent = ((TextMessage) receivedMessage).getText();
 				System.out.println(messageFromAgent);
 
-				// get the useful data out of the message
+				// get the needed data out of the message
 				try {
 					int i = 0;
 					for (; i < messageFromAgent.length(); i++) {
@@ -80,8 +80,9 @@ public class Consolidator implements MessageListener {
 					String data = messageFromAgent.substring(0, i);
 					int orderNr = Integer.parseInt(data);
 					// find out which consolidator confirmed the booking
-					if (receivedMessage.getJMSReplyTo().equals("consolidatorQueue1"))
+					if (receivedMessage.getJMSReplyTo().equals("consolidatorQueue1")) {
 						System.out.println("[Consolidator 1] Confirmation for Booking Order " + orderNr);
+					}	
 					else
 						System.out.println("[Consolidator 2] Confirmation for Booking Order " + orderNr);
 
@@ -91,7 +92,7 @@ public class Consolidator implements MessageListener {
 					response.setJMSCorrelationID(receivedMessage.getJMSCorrelationID());
 					//Send the response to the Destination specified by the JMSReplyTo field of the received message,
 	            //this is presumably a temporary queue created by the client
-	            this.replyProducer.send(receivedMessage.getJMSReplyTo(), response);
+					this.replyToAgent.send(receivedMessage.getJMSReplyTo(), response);
 					
 				} catch (IndexOutOfBoundsException ex) {
 					System.out.println("A problem with the substring " + ex);
@@ -107,7 +108,7 @@ public class Consolidator implements MessageListener {
 				 * from the airfair consolidators
 				 */
 				MessageProducer replyFromConsolidators = session.createProducer(receivedMessage.getJMSReplyTo());
-				response.setJMSCorrelationID(receivedMessage.getJMSMessageID());
+				response.setJMSCorrelationID(receivedMessage.getJMSCorrelationID());
 				replyFromConsolidators.send(response);
 			}
 		} catch (JMSException ex) {

@@ -121,8 +121,8 @@ public class Customer implements MessageListener {
 			 * set a correlation ID, so when you get a response you know which sent
 			 * message the response is for send the message to the consumer
 			 */
-			// String correlationID = this.createRandomString();
-			// objMessage.setJMSCorrelationID(correlationID);
+			 String correlationID = this.createRandomString();
+			 objMessage.setJMSCorrelationID(correlationID);
 
 			this.messageProducer.send(objMessage);
 		} catch (JMSException ex) {
@@ -172,6 +172,7 @@ public class Customer implements MessageListener {
 				// System.out.println("[" + this + "] Reply Message: '" +
 				// b.consumerMessage());
 				System.out.println("JMSCorrelationID: " + objMessage.getJMSCorrelationID());
+				System.out.println("Confirmation of booking for " + b.getCustomer());
 			}
 		} catch (JMSException ex) {
 			System.out.println("from the onMessage() method " + ex);
