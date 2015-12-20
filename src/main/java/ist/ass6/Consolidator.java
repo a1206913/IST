@@ -69,7 +69,7 @@ public class Consolidator implements MessageListener {
 							break;
 						}
 					}
-					String data = messageFromAgent.substring(14, i);
+					String data = messageFromAgent.substring(0, i);
 					int orderNr = Integer.parseInt(data);
 					// find out which consolidator confirmed the booking
 					if (receivedMessage.getJMSReplyTo().equals("consolidatorQueue1"))
@@ -80,10 +80,10 @@ public class Consolidator implements MessageListener {
 					// create the response
 					response.setText("Confirmation for Booking Order " + orderNr + " received");
 				} catch (IndexOutOfBoundsException ex) {
-					System.out.println("A problem with the substring" + ex);
+					System.out.println("A problem with the substring " + ex);
 					ex.printStackTrace();
 				} catch (IllegalArgumentException ex) {
-					System.out.println("Symbol cannot be parsed into an int" + ex);
+					System.out.println("Symbol cannot be parsed into an int " + ex);
 					ex.printStackTrace();
 				}
 

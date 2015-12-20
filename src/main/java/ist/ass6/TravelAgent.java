@@ -148,15 +148,22 @@ public class TravelAgent implements MessageListener, ExceptionListener {
 				 * *********************************
 				 */
 
-				// create the message for the consolidators
 				int order = 1;
-				TextMessage messageToConsolidator = session.createTextMessage("Booking Order " + order + ": " + b.consolidatorMessage());
+				String consolidatorName = "Consolidator 2"; 
+//				split the messages for the two consolidators
+				if (b.getDestination().contains("Austria")) {
+					consolidatorName = "Consolidator 1";
+				}
+				
+				// create the message for the consolidators
+				TextMessage messageToConsolidator = session.createTextMessage(order + ": " + b.consolidatorMessage());
 				// set the MessageID to the MessageID of the message received by the
 				// customer
 				messageToConsolidator.setJMSMessageID(objReplyMsg.getJMSMessageID());
 				messageToConsolidator.setJMSReplyTo(tempConsolidatorQueue);
 
 				mRequestToConsolidator1.send(messageToConsolidator);
+				System.out.println("Booking Order " + order + ": " + b.consolidatorMessage() + " (forwarded to " + consolidatorName + ")");
 				order++;
 				/*
 				 * handling the messages accordingly by setting the correlationID
